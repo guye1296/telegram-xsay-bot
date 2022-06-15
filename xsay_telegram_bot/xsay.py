@@ -1,8 +1,10 @@
+import argparse
+import pkg_resources
 import typing
+import os
 from PIL import Image, ImageDraw, ImageFont
 
 
-FONT_NAME = "font.otf"
 FONT_SIZE = 50
 TEXT_BUBBLE_DISTANCE_FROM_BASE_WIDTH = 20
 TEXT_BUBBLE_DISTANCE_FROM_BASE_HEIGHT = 20
@@ -10,10 +12,11 @@ TEXT_BUBBLE_PADDING_WIDTH = 5
 TEXT_BUBBLE_PADDING_HEIGHT = 5
 
 
+    
 def draw_text_bubble(source_image: Image.Image, text: str, text_bubble_base: typing.Tuple[int, int], directing_right: bool = True) -> Image.Image:
 
     # 1. Get the text size
-    font = ImageFont.truetype(FONT_NAME, FONT_SIZE)
+    font = ImageFont.truetype(pkg_resources.resource_filename('xsay_telegram_bot', os.path.join('resources', 'caption_font.otf')), FONT_SIZE)
     draw = ImageDraw.Draw(source_image)
 
     text_bound_box_coordinates = \
@@ -124,3 +127,29 @@ def draw_text_bubble(source_image: Image.Image, text: str, text_bubble_base: typ
     )
 
     return image
+
+
+def main():
+    def parse_arguments() -> argparse.Namespace:
+        parser = argparse.ArgumentParser()
+        parser.add_argument("image_path", type=str, help="Image path")
+        parser.add_argument("text", type=str, help="Text to display")
+        parser.add_argument("x", type=int, help="x coordinate")
+        parser.add_argument("y", type=int, help="y coordinate")
+        parser.add_argument("--facing-right", action='store_false', help="display right of the character")
+        return parser.parse_args()
+
+    arguments = parse_arguments()
+
+    image = Image.open(arguments.image_path)
+
+    im = draw_text_bubble(
+        image,
+        arguments.text,
+        (arguments.x, arguments.y),
+        arguments.facing_right
+    )
+
+    im.show()
+
+    return
