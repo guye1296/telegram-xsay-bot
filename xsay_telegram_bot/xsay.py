@@ -17,13 +17,45 @@ TEXT_BUBBLE_PADDING_WIDTH = 5
 TEXT_BUBBLE_PADDING_HEIGHT = 5
 
 
-    
+def does_text_contains_hebrew_letters(text: str) -> bool:
+    hebrew_alphabet = u'אבגדהוזחטיכלמנסעפצקרשת'
+    hebrew_letters_present = any(letter in hebrew_alphabet for letter in text)
+
+    return hebrew_letters_present
+
+
+def get_font_from_text(text:str) -> ImageFont.FreeTypeFont:
+    if not does_text_contains_hebrew_letters(text):
+        font_name = 'caption_font.otf'
+    else:
+        font_name = 'hebrew_caption_font.ttf'
+
+    return ImageFont.truetype(
+        pkg_resources.resource_filename('xsay_telegram_bot', os.path.join('resources', font_name)), FONT_SIZE
+    )
+
+
+def rtl_to_ltr(text: str) -> str:
+    output_words = []
+
+    for word in text.split():
+        if does_text_contains_hebrew_letters(word):
+            word = word[::-1]
+        output_words.insert(0, word)
+
+    return u' '.join(output_words)
+
+
 def draw_text_bubble(source_image: Image.Image, text: str, text_bubble_base: typing.Tuple[int, int], directing_right: bool = True) -> Image.Image:
     
     # 1. Get the text size
-    font = ImageFont.truetype(pkg_resources.resource_filename('xsay_telegram_bot', os.path.join('resources', 'caption_font.otf')), FONT_SIZE)
+    font = get_font_from_text(text)
     draw = ImageDraw.Draw(source_image)
 
+    # FIXME: As a temporary patch to avoid using libraqm RTL text hebrew words are reversed
+    if does_text_contains_hebrew_letters(text):
+        text = rtl_to_ltr(text)
+    
     text_bound_box_coordinates = \
         draw.textbbox((0, 0), text, font, anchor='lt')
 
