@@ -1,0 +1,11 @@
+[images]
+
+[images.1]
+path = "./1.png"
+direction = "right"
+text_bubble_coordinates = [120, 140]
+
+[images.2]
+path = "./2.png"
+direction = "any"
+text_bubble_coordinates = [84, 150]

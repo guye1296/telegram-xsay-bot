@@ -2,6 +2,11 @@ import argparse
 import pkg_resources
 import typing
 import os
+import enum
+import random
+import toml
+from io import BytesIO
+from singleton_decorator import singleton
 from PIL import Image, ImageDraw, ImageFont
 
 
@@ -14,7 +19,7 @@ TEXT_BUBBLE_PADDING_HEIGHT = 5
 
     
 def draw_text_bubble(source_image: Image.Image, text: str, text_bubble_base: typing.Tuple[int, int], directing_right: bool = True) -> Image.Image:
-
+    
     # 1. Get the text size
     font = ImageFont.truetype(pkg_resources.resource_filename('xsay_telegram_bot', os.path.join('resources', 'caption_font.otf')), FONT_SIZE)
     draw = ImageDraw.Draw(source_image)
@@ -127,6 +132,83 @@ def draw_text_bubble(source_image: Image.Image, text: str, text_bubble_base: typ
     )
 
     return image
+
+
+class Direction(enum.Enum):
+    Right = 0
+    Left = 1
+    Any = 2
+
+    @classmethod 
+    def from_string(cls, input_string: str):
+        input_string = input_string.lower()
+
+        if input_string == 'right':
+            return cls.Right
+        elif input_string == 'left':
+            return cls.Left
+        elif input_string == 'any':
+            return cls.Any
+
+        raise ValueError(f"invalid value {input_string}")
+        
+
+class ImageGenerator:
+    def __init__(self, image_template_path: str, text_bubble_coordinates: typing.Tuple[int, int], bubble_direction: Direction) -> None:
+        self._path = image_template_path
+        self._text_bubble_coordinates = text_bubble_coordinates
+        self._bubble_direction = bubble_direction
+
+
+    def _should_bubble_be_facing_right(self) -> bool:
+        if self._bubble_direction == Direction.Right:
+            return True
+        elif self._bubble_direction == Direction.Left:
+            return False
+        # If "Any" - pick direction at random
+        return random.choice((True, False))
+
+
+    def generate(self, phrase: str) -> Image.Image:
+        source_image = Image.open(self._path)
+
+        return draw_text_bubble(source_image, phrase, self._text_bubble_coordinates, self._should_bubble_be_facing_right())
+
+    @classmethod
+    def from_image_template_file_record(cls, record: dict, base_template_dir: str):
+        return cls(
+            os.path.join(base_template_dir, record['path']),
+            tuple(record['text_bubble_coordinates']), 
+            Direction.from_string(record['direction'])
+        )
+
+@singleton
+class Generator:
+    def __init__(self, image_templates_file_path: str, phrase_file_path: str):
+        with open(phrase_file_path, 'r') as phrase_file:
+            self._phrases = [phrase for phrase in phrase_file.read().splitlines() if len(phrase) > 0]
+        with open(image_templates_file_path, 'r') as image_templates_file:
+            image_templates_records = toml.load(image_templates_file)['images']
+
+            image_templates_file_directory = os.path.dirname(image_templates_file_path)
+
+            self._image_templates = [
+                ImageGenerator.from_image_template_file_record(record, image_templates_file_directory) for
+                record in 
+                image_templates_records.values()
+            ]
+
+    
+    def generate(self) -> BytesIO:
+        phrase = random.choice(self._phrases)
+        template = random.choice(self._image_templates)
+
+        generated_image = template.generate(phrase)
+        stream = BytesIO()
+        generated_image.save(stream, format='png')
+        stream.seek(0)
+
+        return stream
 
 
 def main():
