@@ -80,6 +80,7 @@ def draw_text_bubble(source_image: Image.Image, text: str, text_bubble_base: typ
     text_bubble_minimal_edge_height += source_image_paste_height
     text_bubble_maximal_edge_height += source_image_paste_height
 
+    text_bubble_triangle_crossover_with_rectangle_width += source_image_paste_width
 
     # Draw the initial rectangle and add the text
     draw = ImageDraw.Draw(image)
